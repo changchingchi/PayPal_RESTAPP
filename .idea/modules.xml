@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/PayPalAndroidSDK-2.8.4/PayPalAndroidSDK-2.8.4.iml" filepath="$PROJECT_DIR$/PayPalAndroidSDK-2.8.4/PayPalAndroidSDK-2.8.4.iml" />
+      <module fileurl="file://$PROJECT_DIR$/PayPal_RESTAPP.iml" filepath="$PROJECT_DIR$/PayPal_RESTAPP.iml" />
+      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+    </modules>
+  </component>
+</project>
+
