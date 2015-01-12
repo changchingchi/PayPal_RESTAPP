@@ -2,37 +2,59 @@ package com.example.chchi.paypal_restapp;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 
+import com.loopj.android.http.AsyncHttpClient;
+import com.loopj.android.http.RequestParams;
+import com.loopj.android.http.TextHttpResponseHandler;
+import com.paypal.android.sdk.payments.PayPalAuthorization;
 import com.paypal.android.sdk.payments.PayPalConfiguration;
+import com.paypal.android.sdk.payments.PayPalFuturePaymentActivity;
 import com.paypal.android.sdk.payments.PayPalPayment;
 import com.paypal.android.sdk.payments.PayPalService;
 import com.paypal.android.sdk.payments.PaymentActivity;
 import com.paypal.android.sdk.payments.PaymentConfirmation;
 
+import org.apache.http.Header;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.math.BigDecimal;
 
 
 public class MainActivity extends Activity {
-
+    private static String F_TAG = "FuturePayment";
+    private static String PayPal_Server_URL = "http://changchingchi.com/Demo/PayPalPlayground/restapi/paypal/rest-api-sdk-php/sample/payments/CreateFuturePayment.php";
     private static final int PAYPAL_REQUEST = 100;
+    private static final int REQUEST_CODE_FUTURE_PAYMENT = 101;
     private static PayPalConfiguration config = new PayPalConfiguration()
             .environment(PayPalConfiguration.ENVIRONMENT_SANDBOX)
-            .clientId("AVo6vRBmro2mOMfFbrsWVZhaFoDaGB60ga2pRaFC6iTZ02I2jzmH9IalQVlJ");
-    Button mBuynow;
+            .clientId("AVo6vRBmro2mOMfFbrsWVZhaFoDaGB60ga2pRaFC6iTZ02I2jzmH9IalQVlJ")
+            .merchantName("PayPalRestAPIExample")
+            .merchantPrivacyPolicyUri(Uri.parse("https://www.example.com/privacy"))
+            .merchantUserAgreementUri(Uri.parse("https://www.example.com/legal"));
+    Button mBuynow, mFutureBuynow;
+    AsyncHttpClient mHttpClient;
+    String mResponse;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mBuynow = (Button)findViewById(R.id.pp_buynow);
+        mFutureBuynow = (Button) findViewById(R.id.PP_futurebuynow);
+        mHttpClient = new AsyncHttpClient();
+
+
+
     }
 
     @Override
@@ -41,11 +63,23 @@ public class MainActivity extends Activity {
         mBuynow.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                PayPalPayment payment = new PayPalPayment(new BigDecimal("10"),"USD","Moto360",PayPalPayment.PAYMENT_INTENT_SALE);
+                PayPalPayment payment = new PayPalPayment(new BigDecimal("50"),"USD","Moto360",PayPalPayment.PAYMENT_INTENT_SALE);
                 Intent intent = new Intent(MainActivity.this, PaymentActivity.class);
                 intent.putExtra(PayPalService.EXTRA_PAYPAL_CONFIGURATION,config);
                 intent.putExtra(PaymentActivity.EXTRA_PAYMENT,payment);
                 startActivityForResult(intent,PAYPAL_REQUEST);
+            }
+        });
+
+        mFutureBuynow.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, PayPalFuturePaymentActivity.class);
+
+                // send the same configuration for restart resiliency
+                intent.putExtra(PayPalService.EXTRA_PAYPAL_CONFIGURATION, config);
+
+                startActivityForResult(intent, REQUEST_CODE_FUTURE_PAYMENT);
             }
         });
     }
@@ -67,6 +101,17 @@ public class MainActivity extends Activity {
                     Log.e("paymentExample", "an extremely unlikely failure occurred: ", e);
                 }
             }
+        }else if (requestCode == REQUEST_CODE_FUTURE_PAYMENT && resultCode == Activity.RESULT_OK) {
+            PayPalAuthorization auth = data
+                    .getParcelableExtra(PayPalFuturePaymentActivity.EXTRA_RESULT_AUTHORIZATION);
+            if(auth!=null){
+                String auth_code = auth.getAuthorizationCode();
+                // talk to your server!
+                Log.d(F_TAG,auth_code);
+                sendAuthorizationToServer(auth);
+
+            }
+
         }
         else if (resultCode == Activity.RESULT_CANCELED) {
             Log.i("paymentExample", "The user canceled.");
@@ -75,6 +120,38 @@ public class MainActivity extends Activity {
             Log.i("paymentExample", "An invalid Payment or PayPalConfiguration was submitted. Please see the docs.");
         }
     }
+
+        private void sendAuthorizationToServer(PayPalAuthorization authorization) {
+            RequestParams params = new RequestParams();
+            params.put("authorization_code", authorization.getAuthorizationCode());
+            params.put("correlationID",config.getApplicationCorrelationId(this));
+            mHttpClient.get(PayPal_Server_URL, params, new TextHttpResponseHandler() {
+                @Override
+                public void onSuccess(int statusCode, Header[] headers, String responseString) {
+                    try {
+                        Log.d("responseString", responseString);
+                        mResponse = new JSONObject(responseString).getString("refreshToken");
+                        Toast.makeText(MainActivity.this, "refresh_token: "+mResponse, Toast.LENGTH_LONG).show();
+                        Log.d("refresh_token: ",mResponse);
+
+                    } catch (JSONException e) {
+                        Toast.makeText(MainActivity.this, "Unable to decode json", Toast.LENGTH_LONG).show();
+                        Log.d("json error", " ", e);
+                    }
+                }
+
+                @Override
+                public void onFailure(int statusCode, Header[] headers, String responseString, Throwable throwable) {
+                    Toast.makeText(MainActivity.this, "Unable to get a json. Status code:Error:" +
+                            responseString, Toast.LENGTH_LONG).show();
+                }
+
+            });
+
+
+
+         }
+
 
     @Override
     protected void onDestroy() {
