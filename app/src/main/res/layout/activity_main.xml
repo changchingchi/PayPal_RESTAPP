@@ -18,11 +18,21 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Future Payment"
-        android:id="@+id/PP_futurebuynow"
+        android:text="Consent Payment"
+        android:id="@+id/PP_futureConsent"
         android:layout_below="@+id/pp_buynow"
         android:layout_marginTop="111dp"
         android:layout_alignStart="@+id/pp_buynow"
         android:layout_alignEnd="@+id/pp_buynow" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Execute Payment"
+        android:id="@+id/pp_futurebuynow"
+        android:layout_below="@+id/PP_futureConsent"
+        android:layout_marginTop="45dp"
+        android:layout_alignStart="@+id/PP_futureConsent"
+        android:layout_alignEnd="@+id/PP_futureConsent" />
 
 </RelativeLayout>

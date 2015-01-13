@@ -31,7 +31,8 @@ import java.math.BigDecimal;
 
 public class MainActivity extends Activity {
     private static String F_TAG = "FuturePayment";
-    private static String PayPal_Server_URL = "http://changchingchi.com/Demo/PayPalPlayground/restapi/paypal/rest-api-sdk-php/sample/payments/CreateFuturePayment.php";
+    private static String PayPal_Server_URL = "http://changchingchi.com/Demo/PayPalPlayground/restapi/paypal/rest-api-sdk-php/sample/payments/CreateFuturePayment2.php";
+    private static String Paypal_DB_URL = "http://changchingchi.com/Demo/PayPalPlayground/restapi/paypal/rest-api-sdk-php/sample/payments/DB.php";
     private static final int PAYPAL_REQUEST = 100;
     private static final int REQUEST_CODE_FUTURE_PAYMENT = 101;
     private static PayPalConfiguration config = new PayPalConfiguration()
@@ -40,7 +41,7 @@ public class MainActivity extends Activity {
             .merchantName("PayPalRestAPIExample")
             .merchantPrivacyPolicyUri(Uri.parse("https://www.example.com/privacy"))
             .merchantUserAgreementUri(Uri.parse("https://www.example.com/legal"));
-    Button mBuynow, mFutureBuynow;
+    Button mBuynow, mFutureBuynow, mFutureConsent;
     AsyncHttpClient mHttpClient;
     String mResponse;
 
@@ -50,7 +51,8 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mBuynow = (Button)findViewById(R.id.pp_buynow);
-        mFutureBuynow = (Button) findViewById(R.id.PP_futurebuynow);
+        mFutureBuynow = (Button) findViewById(R.id.pp_futurebuynow);
+        mFutureConsent = (Button) findViewById(R.id.PP_futureConsent);
         mHttpClient = new AsyncHttpClient();
 
 
@@ -71,7 +73,7 @@ public class MainActivity extends Activity {
             }
         });
 
-        mFutureBuynow.setOnClickListener(new View.OnClickListener() {
+        mFutureConsent.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(MainActivity.this, PayPalFuturePaymentActivity.class);
@@ -80,6 +82,12 @@ public class MainActivity extends Activity {
                 intent.putExtra(PayPalService.EXTRA_PAYPAL_CONFIGURATION, config);
 
                 startActivityForResult(intent, REQUEST_CODE_FUTURE_PAYMENT);
+            }
+        });
+        mFutureBuynow.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                sendClientIDToServer();
             }
         });
     }
@@ -105,9 +113,7 @@ public class MainActivity extends Activity {
             PayPalAuthorization auth = data
                     .getParcelableExtra(PayPalFuturePaymentActivity.EXTRA_RESULT_AUTHORIZATION);
             if(auth!=null){
-                String auth_code = auth.getAuthorizationCode();
                 // talk to your server!
-                Log.d(F_TAG,auth_code);
                 sendAuthorizationToServer(auth);
 
             }
@@ -122,10 +128,32 @@ public class MainActivity extends Activity {
     }
 
         private void sendAuthorizationToServer(PayPalAuthorization authorization) {
+
+
+            /**
+             * TODO: Send the authorization response to your server, where it can
+             * exchange the authorization code for OAuth access and refresh tokens.
+             *
+             * Your server must then store these tokens, so that your server code
+             * can execute payments for this user in the future.
+             *
+             * A more complete example that includes the required app-server to
+             * PayPal-server integration is available from
+             * https://github.com/paypal/rest-api-sdk-python/tree/master/samples/mobile_backend
+             * send auth_code --> get refresh token and store in on Server.
+
+             */
+
+
+
             RequestParams params = new RequestParams();
             params.put("authorization_code", authorization.getAuthorizationCode());
-            params.put("correlationID",config.getApplicationCorrelationId(this));
-            mHttpClient.get(PayPal_Server_URL, params, new TextHttpResponseHandler() {
+//            params.put("correlationID",config.getApplicationCorrelationId(this));
+
+            Log.d("auth_code",authorization.getAuthorizationCode());
+//            Log.d("corID",config.getApplicationCorrelationId(this));
+
+            mHttpClient.get(Paypal_DB_URL, params, new TextHttpResponseHandler() {
                 @Override
                 public void onSuccess(int statusCode, Header[] headers, String responseString) {
                     try {
@@ -151,6 +179,51 @@ public class MainActivity extends Activity {
 
 
          }
+
+    private void sendClientIDToServer() {
+
+
+        /**
+         * TODO: get the clientID here and send to your server for payment execution.
+         * 1. you have a DB created and your refresh token generated already.
+         * 2. when you submit the request to your server this time, you need to retrieve the refresh
+         * token you have from step1 and get a new accessToken. Also you need to attach your
+         * client ID as a param here to your server.
+         */
+        RequestParams params = new RequestParams();
+//        params.put("authorization_code", authorization.getAuthorizationCode());
+            params.put("correlationID",config.getClientMetadataId(this));
+
+//        Log.d("auth_code",authorization.getAuthorizationCode());
+            Log.d("corID",config.getApplicationCorrelationId(this));
+
+        mHttpClient.get(PayPal_Server_URL, params, new TextHttpResponseHandler() {
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, String responseString) {
+                try {
+                    Log.d("responseString", responseString);
+                    mResponse = new JSONObject(responseString).getString("refreshToken");
+                    Toast.makeText(MainActivity.this, "refresh_token: "+mResponse, Toast.LENGTH_LONG).show();
+                    Log.d("refresh_token: ",mResponse);
+
+                } catch (JSONException e) {
+                    Toast.makeText(MainActivity.this, "Unable to decode json", Toast.LENGTH_LONG).show();
+                    Log.d("json error", " ", e);
+                }
+            }
+
+            @Override
+            public void onFailure(int statusCode, Header[] headers, String responseString, Throwable throwable) {
+                Toast.makeText(MainActivity.this, "Unable to get a json. Status code:Error:" +
+                        responseString, Toast.LENGTH_LONG).show();
+            }
+
+        });
+
+
+
+    }
+
 
 
     @Override
