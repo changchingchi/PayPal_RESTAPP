@@ -1,6 +1,7 @@
 package com.example.chchi.paypal_restapp;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -182,9 +183,9 @@ public class MainActivity extends Activity {
 
     private void sendClientIDToServer() {
 
+        final ProgressDialog mProgressDialog = ProgressDialog.show(this,"progress","sending request to server and getting response back...", true);
 
         /**
-         * TODO: get the clientID here and send to your server for payment execution.
          * 1. you have a DB created and your refresh token generated already.
          * 2. when you submit the request to your server this time, you need to retrieve the refresh
          * token you have from step1 and get a new accessToken. Also you need to attach your
@@ -192,7 +193,7 @@ public class MainActivity extends Activity {
          */
         RequestParams params = new RequestParams();
 //        params.put("authorization_code", authorization.getAuthorizationCode());
-            params.put("correlationID",config.getClientMetadataId(this));
+            params.put("correlationID",config.getApplicationCorrelationId(this));
 
 //        Log.d("auth_code",authorization.getAuthorizationCode());
             Log.d("corID",config.getApplicationCorrelationId(this));
@@ -205,10 +206,12 @@ public class MainActivity extends Activity {
                     mResponse = new JSONObject(responseString).getString("refreshToken");
                     Toast.makeText(MainActivity.this, "refresh_token: "+mResponse, Toast.LENGTH_LONG).show();
                     Log.d("refresh_token: ",mResponse);
+                    mProgressDialog.dismiss();
 
                 } catch (JSONException e) {
                     Toast.makeText(MainActivity.this, "Unable to decode json", Toast.LENGTH_LONG).show();
                     Log.d("json error", " ", e);
+                    mProgressDialog.dismiss();
                 }
             }
 
@@ -216,6 +219,7 @@ public class MainActivity extends Activity {
             public void onFailure(int statusCode, Header[] headers, String responseString, Throwable throwable) {
                 Toast.makeText(MainActivity.this, "Unable to get a json. Status code:Error:" +
                         responseString, Toast.LENGTH_LONG).show();
+                mProgressDialog.dismiss();
             }
 
         });
